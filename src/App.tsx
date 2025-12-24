@@ -20,8 +20,8 @@ import { GestureRecognizer, FilesetResolver, DrawingUtils } from "@mediapipe/tas
 const TOTAL_NUMBERED_PHOTOS = 31;
 // 修改：将 top.jpg 加入到数组开头
 const bodyPhotoPaths = [
-  './photos/top.jpg',
-  ...Array.from({ length: TOTAL_NUMBERED_PHOTOS }, (_, i) => `./photos/${i + 1}.jpg`)
+  './photos/1.jpg',
+  ...Array.from({ length: TOTAL_NUMBERED_PHOTOS }, (_, i) => `./photos/${ 1}.jpg`)
 ];
 
 // --- 视觉配置 ---
@@ -43,7 +43,7 @@ const CONFIG = {
   },
   counts: {
     foliage: 15000,
-    ornaments: 300,   // 拍立得照片数量
+    ornaments: 50,   // 拍立得照片数量
     elements: 200,    // 圣诞元素数量
     lights: 400       // 彩灯数量
   },
@@ -379,6 +379,35 @@ const TopStar = ({ state }: { state: 'CHAOS' | 'FORMED' }) => {
   );
 };
 
+// --- Component: Merry Header (艺术字体，页面头部居中) ---
+const MerryHeader = () => {
+  return (
+  <div style={{ position: 'absolute', top: '48px', left: '50%', transform: 'translateX(-50%)', zIndex: 30, pointerEvents: 'none' }}>
+      <style>{`
+        @keyframes mcFadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes mcFloat { 0% { transform: translateY(0); } 50% { transform: translateY(-6px); } 100% { transform: translateY(0); } }
+        .mc-container { display: flex; align-items: center; justify-content: center; }
+        .mc-text { opacity: 0; animation: mcFadeIn 0.9s ease-out forwards, mcFloat 6s ease-in-out 1s infinite; transform-origin: center; }
+      `}</style>
+      <svg className="mc-container mc-text" width="760" height="90" viewBox="0 0 760 90" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="mcGrad" x1="0" x2="1">
+            <stop offset="0%" stopColor="#FFD700" />
+            <stop offset="50%" stopColor="#FF8A00" />
+            <stop offset="100%" stopColor="#FF5252" />
+          </linearGradient>
+          <filter id="mcShadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#000" floodOpacity="0.45" />
+          </filter>
+        </defs>
+        <text x="50%" y="55%" dominantBaseline="middle" textAnchor="middle" fontFamily="'Brush Script MT', 'KaiTi', 'Georgia', serif" fontSize="56" fontWeight="700" fill="url(#mcGrad)" filter="url(#mcShadow)" style={{ letterSpacing: '4px' }}>
+          圣诞快乐
+        </text>
+      </svg>
+    </div>
+  );
+};
+
 // --- Main Scene Experience ---
 const Experience = ({ sceneState, rotationSpeed }: { sceneState: 'CHAOS' | 'FORMED', rotationSpeed: number }) => {
   const controlsRef = useRef<any>(null);
@@ -433,7 +462,7 @@ const GestureController = ({ onGesture, onMove, onStatus, debugMode }: any) => {
     let requestRef: number;
 
     const setup = async () => {
-      onStatus("DOWNLOADING AI...");
+        onStatus("正在下载 AI 模型...");
       try {
         const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
         gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
@@ -444,20 +473,20 @@ const GestureController = ({ onGesture, onMove, onStatus, debugMode }: any) => {
           runningMode: "VIDEO",
           numHands: 1
         });
-        onStatus("REQUESTING CAMERA...");
+          onStatus("正在请求摄像头权限...");
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
             videoRef.current.play();
-            onStatus("AI READY: SHOW HAND");
+              onStatus("AI 已就绪：请展示手势");
             predictWebcam();
           }
         } else {
-            onStatus("ERROR: CAMERA PERMISSION DENIED");
+              onStatus("错误：摄像头权限被拒绝");
         }
       } catch (err: any) {
-        onStatus(`ERROR: ${err.message || 'MODEL FAILED'}`);
+          onStatus(`错误：${err.message || '模型加载失败'}`);
       }
     };
 
@@ -480,13 +509,13 @@ const GestureController = ({ onGesture, onMove, onStatus, debugMode }: any) => {
               const name = results.gestures[0][0].categoryName; const score = results.gestures[0][0].score;
               if (score > 0.4) {
                  if (name === "Open_Palm") onGesture("CHAOS"); if (name === "Closed_Fist") onGesture("FORMED");
-                 if (debugMode) onStatus(`DETECTED: ${name}`);
+                if (debugMode) onStatus(`检测到：${name}`);
               }
               if (results.landmarks.length > 0) {
                 const speed = (0.5 - results.landmarks[0][0].x) * 0.15;
                 onMove(Math.abs(speed) > 0.01 ? speed : 0);
               }
-            } else { onMove(0); if (debugMode) onStatus("AI READY: NO HAND"); }
+            } else { onMove(0); if (debugMode) onStatus("AI 已就绪：未检测到手势"); }
         }
         requestRef = requestAnimationFrame(predictWebcam);
       }
@@ -507,7 +536,7 @@ const GestureController = ({ onGesture, onMove, onStatus, debugMode }: any) => {
 export default function GrandTreeApp() {
   const [sceneState, setSceneState] = useState<'CHAOS' | 'FORMED'>('CHAOS');
   const [rotationSpeed, setRotationSpeed] = useState(0);
-  const [aiStatus, setAiStatus] = useState("INITIALIZING...");
+  const [aiStatus, setAiStatus] = useState("初始化中...");
   const [debugMode, setDebugMode] = useState(false);
 
   return (
@@ -517,32 +546,33 @@ export default function GrandTreeApp() {
             <Experience sceneState={sceneState} rotationSpeed={rotationSpeed} />
         </Canvas>
       </div>
-      <GestureController onGesture={setSceneState} onMove={setRotationSpeed} onStatus={setAiStatus} debugMode={debugMode} />
+  <GestureController onGesture={setSceneState} onMove={setRotationSpeed} onStatus={setAiStatus} debugMode={debugMode} />
+  <MerryHeader />
 
       {/* UI - Stats */}
       <div style={{ position: 'absolute', bottom: '30px', left: '40px', color: '#888', zIndex: 10, fontFamily: 'sans-serif', userSelect: 'none' }}>
         <div style={{ marginBottom: '15px' }}>
-          <p style={{ fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '4px' }}>Memories</p>
+          <p style={{ fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '4px' }}>回忆</p>
           <p style={{ fontSize: '24px', color: '#FFD700', fontWeight: 'bold', margin: 0 }}>
-            {CONFIG.counts.ornaments.toLocaleString()} <span style={{ fontSize: '10px', color: '#555', fontWeight: 'normal' }}>POLAROIDS</span>
+          {CONFIG.counts.ornaments.toLocaleString()} <span style={{ fontSize: '10px', color: '#555', fontWeight: 'normal' }}>拍立得</span>
           </p>
         </div>
         <div>
-          <p style={{ fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '4px' }}>Foliage</p>
+          <p style={{ fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '4px' }}>针叶</p>
           <p style={{ fontSize: '24px', color: '#004225', fontWeight: 'bold', margin: 0 }}>
-            {(CONFIG.counts.foliage / 1000).toFixed(0)}K <span style={{ fontSize: '10px', color: '#555', fontWeight: 'normal' }}>EMERALD NEEDLES</span>
+            {(CONFIG.counts.foliage / 1000).toFixed(0)}K <span style={{ fontSize: '10px', color: '#555', fontWeight: 'normal' }}>祖母绿针叶</span>
           </p>
         </div>
       </div>
 
       {/* UI - Buttons */}
       <div style={{ position: 'absolute', bottom: '30px', right: '40px', zIndex: 10, display: 'flex', gap: '10px' }}>
-        <button onClick={() => setDebugMode(!debugMode)} style={{ padding: '12px 15px', backgroundColor: debugMode ? '#FFD700' : 'rgba(0,0,0,0.5)', border: '1px solid #FFD700', color: debugMode ? '#000' : '#FFD700', fontFamily: 'sans-serif', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', backdropFilter: 'blur(4px)' }}>
-           {debugMode ? 'HIDE DEBUG' : '🛠 DEBUG'}
-        </button>
-        <button onClick={() => setSceneState(s => s === 'CHAOS' ? 'FORMED' : 'CHAOS')} style={{ padding: '12px 30px', backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255, 215, 0, 0.5)', color: '#FFD700', fontFamily: 'serif', fontSize: '14px', fontWeight: 'bold', letterSpacing: '3px', textTransform: 'uppercase', cursor: 'pointer', backdropFilter: 'blur(4px)' }}>
-           {sceneState === 'CHAOS' ? 'Assemble Tree' : 'Disperse'}
-        </button>
+      <button onClick={() => setDebugMode(!debugMode)} style={{ padding: '12px 15px', backgroundColor: debugMode ? '#FFD700' : 'rgba(0,0,0,0.5)', border: '1px solid #FFD700', color: debugMode ? '#000' : '#FFD700', fontFamily: 'sans-serif', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', backdropFilter: 'blur(4px)' }}>
+        {debugMode ? '隐藏调试' : '🛠 调试'}
+      </button>
+      <button onClick={() => setSceneState(s => s === 'CHAOS' ? 'FORMED' : 'CHAOS')} style={{ padding: '12px 30px', backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255, 215, 0, 0.5)', color: '#FFD700', fontFamily: 'serif', fontSize: '14px', fontWeight: 'bold', letterSpacing: '3px', textTransform: 'uppercase', cursor: 'pointer', backdropFilter: 'blur(4px)' }}>
+        {sceneState === 'CHAOS' ? '组装圣诞树' : '散开'}
+      </button>
       </div>
 
       {/* UI - AI Status */}
